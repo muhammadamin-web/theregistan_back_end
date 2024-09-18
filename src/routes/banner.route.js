@@ -8,14 +8,6 @@ let banner = null;
 
 router.post("/", AdminMiddleware, async (req, res) => {
   try {
-    const banner = await Banner.findOne();
-    if (banner) {
-      return res.status(403).send({
-        message: "banner allready exist",
-        success: false,
-      });
-    }
-
     const newBanner = new Banner(req.body);
 
     await newBanner.save();
@@ -37,7 +29,7 @@ router.post("/", AdminMiddleware, async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     if (!banner) {
-      banner = await Banner.find().populate("image");
+      banner = await Banner.find().populate("image").sort({ createdAt: -1 }).limit(5);
     }
     return res.status(200).send({
       message: "Banner GET successfully",

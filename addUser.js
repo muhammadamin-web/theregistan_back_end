@@ -12,7 +12,7 @@ const userData = {
   email: "newemail@example.com",
   PhoneNumber: "+123456789",
   password: "password123",  // Parol shu yerda hash qilinadi
-  role: "user"  // Admin yoki author deb ham o'zgartirish mumkin
+  role: "admin"  // Admin yoki author deb ham o'zgartirish mumkin
 };
 
 // Yangi foydalanuvchini yaratish
