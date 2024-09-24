@@ -6,10 +6,10 @@ const router = express.Router()
 
 function generateSlug(title) {
     return title
-        .toLowerCase()
-        .trim()
-        .replace(/[^\w\s-]/g, "")
-        .replace(/\s+/g, "-")
+        .toLowerCase() // Kichik harflarga o'zgartirish
+        .trim() // Bosh va oxiridagi bo'shliqlarni olib tashlash
+        .replace(/[^a-zA-Z0-9а-яА-ЯёЁ\s-]/g, "") // Maxsus belgilarni olib tashlash (faqat harflar, raqamlar, bo'shliqlar va chiziqlar qoldiriladi)
+        .replace(/\s+/g, "-") // Bo'shliqlarni chiziqcha bilan almashtirish
 }
 
 router.post("/", AuthorMiddleware, async (req, res) => {
