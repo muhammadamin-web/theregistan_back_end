@@ -113,6 +113,20 @@ router.put("/:id", AuthorMiddleware, async (req, res) => {
             })
         }
 
+        const { title } = req.body
+        let slug = generateSlug(title)
+        let slugExists = await News.findOne({ slug: slug })
+
+        // Agar slug mavjud bo'lsa, slugga raqam qo'shish va qayta tekshirish
+        let count = 1
+        while (slugExists) {
+            // Slugni raqam bilan yangilash
+            slug = `${generateSlug(title)}-${count}`
+            slugExists = await News.findOne({ slug: slug })
+            count++
+        }
+        req.body.slug = slug
+
         const updatedNews = await News.findByIdAndUpdate(req.params.id, req.body)
         return res.status(200).send({
             message: "News updated successfully",
