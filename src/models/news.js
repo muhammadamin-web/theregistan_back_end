@@ -7,6 +7,11 @@ const news = new Schema(
       type: String,
       required: true,
     },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     content: {
       type: Object,
       required: true,

@@ -1,131 +1,153 @@
-import express from "express";
-import News from "../models/news.js";
-import AuthorMiddleware from "../middleware/owner.middleware.js";
+import express from "express"
+import News from "../models/news.js"
+import AuthorMiddleware from "../middleware/owner.middleware.js"
 
-const router = express.Router();
+const router = express.Router()
+
+function generateSlug(title) {
+    return title
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/\s+/g, "-")
+}
+
 router.post("/", AuthorMiddleware, async (req, res) => {
-  try {
-    //   create new news
-    req.body.author = req.user._id;
-    const newNews = new News(req.body);
-    await newNews.save();
-    return res.status(201).send({
-      message: "News created successfully",
-      data: newNews,
-      success: true,
-    });
-  } catch (error) {
-    res.status(500).send({
-      message: error.message,
-      data: error,
-      success: false,
-    });
-  }
-});
+    try {
+        //   create new news
+        const { title } = req.body
+        let slug = generateSlug(title)
+        let slugExists = await News.findOne({ slug: slug })
+
+        // Agar slug mavjud bo'lsa, slugga raqam qo'shish va qayta tekshirish
+        let count = 1
+        while (slugExists) {
+            // Slugni raqam bilan yangilash
+            slug = `${generateSlug(title)}-${count}`
+            slugExists = await News.findOne({ slug: slug })
+            count++
+        }
+
+        req.body.author = req.user._id
+        req.body.slug = slug
+        const newNews = new News(req.body)
+        await newNews.save()
+        return res.status(201).send({
+            message: "News created successfully",
+            data: newNews,
+            success: true,
+        })
+    } catch (error) {
+        res.status(500).send({
+            message: error.message,
+            data: error,
+            success: false,
+        })
+    }
+})
 
 router.get("/", async (req, res) => {
-  const perPage = 12;
-  let { page, title, category } = req.query;
-  page = page || 1;
-  let query = {};
-  if (title) {
-    const escapedInput = title.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"); // Escape special characters
-    const regexPattern = new RegExp(escapedInput, "i");
-    query.title = { $regex: regexPattern };
-  }
-  if (category && category !== "undefined" && category !== "null")
-    query.category = category;
-
-  const count = await News.countDocuments(query);
-
-  try {
-    const news = await News.find(query)
-      .skip(perPage * page - perPage)
-      .sort({ date: -1 })
-      .limit(perPage)
-      .populate("image category");
-    return res.status(200).json({
-      news,
-      current: page,
-      pages: Math.ceil(count / perPage),
-      allFindedPosts: count,
-    });
-  } catch (error) {
-    res.status(500).send({
-      message: error.message,
-      data: error,
-      success: false,
-    });
-  }
-});
-
-router.get("/:id", async (req, res) => {
-  try {
-    const news = await News.findById(req.params.id).populate("image category");
-    if (!news) {
-      return res.status(404).send({
-        message: "News not found",
-        success: false,
-      });
+    const perPage = 12
+    let { page, title, category } = req.query
+    page = page || 1
+    let query = {}
+    if (title) {
+        const escapedInput = title.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&") // Escape special characters
+        const regexPattern = new RegExp(escapedInput, "i")
+        query.title = { $regex: regexPattern }
     }
-    return res.status(200).send({
-      message: "News GET successfully",
-      data: news,
-      success: true,
-    });
-  } catch (error) {
-    res.status(500).send({
-      message: error.message,
-      data: error,
-      success: false,
-    });
-  }
-});
+    if (category && category !== "undefined" && category !== "null") query.category = category
+
+    const count = await News.countDocuments(query)
+
+    try {
+        const news = await News.find(query)
+            .skip(perPage * page - perPage)
+            .sort({ date: -1 })
+            .limit(perPage)
+            .populate("image category")
+        return res.status(200).json({
+            news,
+            current: page,
+            pages: Math.ceil(count / perPage),
+            allFindedPosts: count,
+        })
+    } catch (error) {
+        res.status(500).send({
+            message: error.message,
+            data: error,
+            success: false,
+        })
+    }
+})
+
+router.get("/:slug", async (req, res) => {
+    try {
+        const news = await News.findOne({ slug: req.params.slug }).populate("image category")
+        if (!news) {
+            return res.status(404).send({
+                message: "News not found",
+                success: false,
+            })
+        }
+        return res.status(200).send({
+            message: "News GET successfully",
+            data: news,
+            success: true,
+        })
+    } catch (error) {
+        res.status(500).send({
+            message: error.message,
+            data: error,
+            success: false,
+        })
+    }
+})
 router.put("/:id", AuthorMiddleware, async (req, res) => {
-  try {
-    const news = await News.findById(req.params.id);
-    if (!news) {
-      return res.status(404).send({
-        message: "News not found",
-        success: false,
-      });
-    }
+    try {
+        const news = await News.findById(req.params.id)
+        if (!news) {
+            return res.status(404).send({
+                message: "News not found",
+                success: false,
+            })
+        }
 
-    const updatedNews = await News.findByIdAndUpdate(req.params.id, req.body);
-    return res.status(200).send({
-      message: "News updated successfully",
-      data: updatedNews,
-      success: true,
-    });
-  } catch (error) {
-    res.status(500).send({
-      message: error.message,
-      data: error,
-      success: false,
-    });
-  }
-});
+        const updatedNews = await News.findByIdAndUpdate(req.params.id, req.body)
+        return res.status(200).send({
+            message: "News updated successfully",
+            data: updatedNews,
+            success: true,
+        })
+    } catch (error) {
+        res.status(500).send({
+            message: error.message,
+            data: error,
+            success: false,
+        })
+    }
+})
 router.delete("/:id", AuthorMiddleware, async (req, res) => {
-  try {
-    const news = await News.findById(req.params.id);
-    if (!news) {
-      return res.status(404).send({
-        message: "News not found",
-        success: false,
-      });
+    try {
+        const news = await News.findById(req.params.id)
+        if (!news) {
+            return res.status(404).send({
+                message: "News not found",
+                success: false,
+            })
+        }
+        await News.findByIdAndDelete(req.params.id)
+        return res.status(200).send({
+            message: "News deleted successfully",
+            success: true,
+        })
+    } catch (error) {
+        res.status(500).send({
+            message: error.message,
+            data: error,
+            success: false,
+        })
     }
-    await News.findByIdAndDelete(req.params.id);
-    return res.status(200).send({
-      message: "News deleted successfully",
-      success: true,
-    });
-  } catch (error) {
-    res.status(500).send({
-      message: error.message,
-      data: error,
-      success: false,
-    });
-  }
-});
+})
 
-export default router;
+export default router
